@@ -223,6 +223,17 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
+@keyframes pp-boot-selfhide {
+  0% { opacity: 1; visibility: visible; }
+  72% { opacity: 1; visibility: visible; }
+  96% { opacity: 0; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+.pp-boot-overlay {
+  animation: pp-boot-selfhide 1.5s ease-in-out both;
+}
+
 .pp-page-in {
   animation: pp-page-in 0.28s ease-out both;
 }

@@ -3,48 +3,33 @@
 import { useEffect, useState } from "react";
 import { Logo } from "./logo";
 
-const CELLS = [
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-];
+const CELLS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export function LoadingScreen() {
-  const [phase, setPhase] = useState<"show" | "hide" | "gone">("show");
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    let goneTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const minDelay = new Promise((r) => setTimeout(r, 900));
+    const minDelay = new Promise((r) => setTimeout(r, 400));
     const loaded = new Promise<void>((resolve) => {
       if (document.readyState === "complete") resolve();
       else window.addEventListener("load", () => resolve(), { once: true });
     });
-    const cap = new Promise<void>((r) => setTimeout(r, 2200));
+    const cap = new Promise<void>((r) => setTimeout(r, 1200));
 
+    let removeTimer: ReturnType<typeof setTimeout> | undefined;
     Promise.race([Promise.all([minDelay, loaded]), cap]).then(() => {
-      setPhase("hide");
-      hideTimer = setTimeout(() => {
-        setPhase("gone");
-        document.body.style.removeProperty("overflow");
-      }, 380);
+      removeTimer = setTimeout(() => setGone(true), 200);
     });
 
-    document.body.style.overflow = "hidden";
-    return () => {
-      clearTimeout(hideTimer);
-      clearTimeout(goneTimer);
-      document.body.style.removeProperty("overflow");
-    };
+    return () => clearTimeout(removeTimer);
   }, []);
 
-  if (phase === "gone") return null;
+  if (gone) return null;
 
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-paper transition-opacity duration-300 ${
-        phase === "hide" ? "pointer-events-none opacity-0" : "opacity-100"
-      }`}
+      className="pp-boot-overlay pointer-events-none fixed inset-0 z-[100] flex flex-col items-center justify-center bg-paper"
     >
       <div className="relative">
         <Logo height={64} priority />

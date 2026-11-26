@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "sonner", "jszip"],
+  },
   turbopack: {
     rules: {
       "*.{jsx,tsx}": {
