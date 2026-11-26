@@ -11,8 +11,8 @@ export function LoadingScreen() {
   const [phase, setPhase] = useState<"show" | "hide" | "gone">("show");
 
   useEffect(() => {
-    let hideTimer: ReturnType<typeof setTimeout>;
-    let goneTimer: ReturnType<typeof setTimeout>;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    let goneTimer: ReturnType<typeof setTimeout> | undefined;
 
     const minDelay = new Promise((r) => setTimeout(r, 900));
     const loaded = new Promise<void>((resolve) => {

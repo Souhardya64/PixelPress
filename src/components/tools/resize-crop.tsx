@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ToolShell, type PPFileEntry } from "@/components/pixelpress/tool-shell";
-import { ColorInput, Field, OptionSection, PPInput, PPRange, PPSelect, SegmentedControl } from "@/components/pixelpress/controls";
+import { ColorInput, Field, OptionSection, PPCheck, PPInput, PPRange, PPSelect, SegmentedControl } from "@/components/pixelpress/controls";
 import { useStartJob } from "@/components/pixelpress/use-start-job";
 import { getToolBySlug } from "@/lib/tools";
 

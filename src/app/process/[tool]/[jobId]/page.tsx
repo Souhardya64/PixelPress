@@ -9,7 +9,7 @@ import { PPButton } from "@/components/pixelpress/pp-button";
 import { STAGES, describeTool, type JobRecord } from "@/lib/job-types";
 import { formatBytes, formatEta } from "@/lib/format";
 import { friendlyError, runJob } from "@/lib/runner";
-import { getJobSafe } from "@/lib/db";
+import { getJobSafe } from "@/lib/jobs";
 import { getToolById } from "@/lib/tools";
 import { cn } from "@/lib/utils";
 

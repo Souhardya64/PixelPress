@@ -19,7 +19,7 @@ import { estimateImageToPdfSize } from "@/lib/impls/shared";
 import { formatBytes } from "@/lib/format";
 import { getToolBySlug } from "@/lib/tools";
 
-const tool = getToolBySlug("img-to-pdf")!;
+const tool = getToolBySlug("image-to-pdf")!;
 
 export function ImageToPdfTool() {
   const [files, setFiles] = useState<PPFileEntry[]>([]);

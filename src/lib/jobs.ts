@@ -1,5 +1,5 @@
 import { uid } from "./format";
-import { putJob } from "./db";
+import { getJob, putJob } from "./db";
 import type { JobRecord, JobStatus } from "./job-types";
 
 export async function createJob(

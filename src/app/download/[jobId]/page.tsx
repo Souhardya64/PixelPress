@@ -7,7 +7,7 @@ import { CheckCircle2, Download, FileArchive, Home, Repeat, Trash2 } from "lucid
 import { PPButton } from "@/components/pixelpress/pp-button";
 import { describeTool, type JobRecord } from "@/lib/job-types";
 import { formatBytes } from "@/lib/format";
-import { getJobSafe } from "@/lib/db";
+import { getJobSafe } from "@/lib/jobs";
 import { getToolById } from "@/lib/tools";
 import { buildZip } from "@/lib/impls/shared";
 

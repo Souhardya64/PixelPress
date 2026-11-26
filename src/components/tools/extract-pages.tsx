@@ -9,7 +9,7 @@ import { useStartJob } from "@/components/pixelpress/use-start-job";
 import { loadPdfDoc } from "@/lib/pdf-client";
 import { getToolBySlug } from "@/lib/tools";
 
-const tool = getToolBySlug("extract-pages")!;
+const tool = getToolBySlug("extract-pdf-pages")!;
 
 export function ExtractPagesTool() {
   const [files, setFiles] = useState<PPFileEntry[]>([]);

@@ -10,9 +10,10 @@ export async function getPdfjs() {
   return pdfjsPromise;
 }
 
-export interface PdfDocHandle {
+interface PdfDocHandle {
   doc: import("pdfjs-dist").PDFDocumentProxy;
   numPages: number;
+  task: { destroy: () => Promise<void> | void };
 }
 
 const docCache = new Map<string, PdfDocHandle>();
@@ -23,15 +24,16 @@ export async function loadPdfDoc(fileId: string, file: File): Promise<PdfDocHand
   if (cached) return cached;
   const pdfjs = await getPdfjs();
   const data = new Uint8Array(await file.arrayBuffer());
-  let doc;
+  const task = pdfjs.getDocument({
+    data,
+    standardFontDataUrl: "/pdf/standard_fonts/",
+    wasmUrl: "/pdf/wasm/",
+    cMapUrl: "/pdf/cmaps/",
+    cMapPacked: true,
+  });
+  let doc: import("pdfjs-dist").PDFDocumentProxy;
   try {
-    doc = await pdfjs.getDocument({
-      data,
-      standardFontDataUrl: "/pdf/standard_fonts/",
-      wasmUrl: "/pdf/wasm/",
-      cMapUrl: "/pdf/cmaps/",
-      cMapPacked: true,
-    }).promise;
+    doc = await task.promise;
   } catch (err) {
     const name = (err as { name?: string })?.name ?? "";
     if (name === "PasswordException") {
@@ -42,13 +44,13 @@ export async function loadPdfDoc(fileId: string, file: File): Promise<PdfDocHand
     }
     throw new Error("Could not read this PDF. It may be corrupted.");
   }
-  const handle = { doc, numPages: doc.numPages };
+  const handle: PdfDocHandle = { doc, numPages: doc.numPages, task };
   docCache.set(fileId, handle);
   if (docCache.size > MAX_CACHED_DOCS) {
     const oldest = docCache.keys().next().value as string | undefined;
     if (oldest) {
       const old = docCache.get(oldest);
-      old?.doc.destroy();
+      void old?.task.destroy();
       docCache.delete(oldest);
     }
   }
@@ -58,7 +60,7 @@ export async function loadPdfDoc(fileId: string, file: File): Promise<PdfDocHand
 export function releasePdfDoc(fileId: string): void {
   const handle = docCache.get(fileId);
   if (handle) {
-    handle.doc.destroy();
+    void handle.task.destroy();
     docCache.delete(fileId);
   }
 }
@@ -76,7 +78,7 @@ export async function renderPageDataUrl(
 ): Promise<string> {
   const { doc } = await loadPdfDoc(fileId, file);
   const page = await doc.getPage(pageNumber);
-  const totalRotation = ((page.rotate + rotationDelta) % 360 + 360) % 360;
+  const totalRotation = (((page.rotate + rotationDelta) % 360) + 360) % 360;
   const base = page.getViewport({ scale: 1, rotation: totalRotation });
   const scale = targetWidth / base.width;
   const viewport = page.getViewport({ scale, rotation: totalRotation });
@@ -87,14 +89,14 @@ export async function renderPageDataUrl(
   if (!ctx) throw new Error("Canvas is not supported in this browser.");
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  return canvas.toDataURL("image/png");
+  await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+  const url = canvas.toDataURL("image/png");
+  canvas.width = 0;
+  canvas.height = 0;
+  return url;
 }
 
-export function parsePageRanges(
-  input: string,
-  totalPages: number
-): number[] {
+export function parsePageRanges(input: string, totalPages: number): number[] {
   const trimmed = input.trim();
   if (!trimmed) throw new Error("Enter at least one page or range, e.g. 1-3, 5.");
   const parts = trimmed.split(/[,;\s]+/).filter(Boolean);

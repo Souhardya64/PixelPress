@@ -67,7 +67,6 @@ export async function runJob(jobId: string, hooks: RunnerHooks, signal: AbortSig
       if (index === currentStage) return;
       currentStage = index;
       hooks.onStage(index, detail);
-      void persistStage(jobId, index);
     },
     progress: (value) => hooks.onProgress(Math.min(1, Math.max(0, value))),
     item: (done, total) => {
@@ -126,17 +125,6 @@ export async function runJob(jobId: string, hooks: RunnerHooks, signal: AbortSig
     await putJob({ ...job, status: "error", error: message, updatedAt: Date.now() });
     hooks.onJob({ ...job, status: "error", error: message });
     throw err instanceof Error ? err : new Error(message);
-  }
-}
-
-async function persistStage(jobId: string, _index: number): Promise<void> {
-  try {
-    const job = await getJob(jobId);
-    if (job && job.status === "processing") {
-      await putJob({ ...job, updatedAt: Date.now() });
-    }
-  } catch {
-    // stage persistence is best-effort
   }
 }
 

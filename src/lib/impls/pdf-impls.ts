@@ -1,4 +1,5 @@
 import type { OutputFile } from "../job-types";
+import type { PDFDocument, PDFImage } from "pdf-lib";
 import { hexToRgb01, sanitizeFileName } from "../format";
 import { getPdfjs, parsePageRanges } from "../pdf-client";
 import { processImage } from "../workers/image-client";
@@ -92,7 +93,7 @@ export async function imgToPdf(ctx: RunCtx): Promise<OutputFile[]> {
   const contentH = Math.max(10, sizeH - marginPt * 2);
 
   let textFont: Awaited<ReturnType<PDFDocument["embedFont"]>> | null = null;
-  let wmImage: Awaited<ReturnType<PDFDocument["embedJpg"]>> | null = null;
+  let wmImage: PDFImage | null = null;
   if (o.watermark.mode === "text" && o.watermark.text.trim()) {
     textFont = await pdf.embedFont(StandardFonts.HelveticaBold);
   }
@@ -331,7 +332,7 @@ export async function compressPdf(ctx: RunCtx): Promise<OutputFile[]> {
     if (!c2d) throw new Error("Canvas is not supported in this browser.");
     c2d.fillStyle = "#ffffff";
     c2d.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: c2d, viewport }).promise;
+    await page.render({ canvas, canvasContext: c2d, viewport }).promise;
     const jpegBytes = await canvasToJpegBytes(canvas, jpegQuality);
     const embedded = await out.embedJpg(jpegBytes);
     const newPage = out.addPage([baseViewport.width, baseViewport.height]);
@@ -340,7 +341,7 @@ export async function compressPdf(ctx: RunCtx): Promise<OutputFile[]> {
     canvas.height = 0;
     ctx.item(i, numPages);
   }
-  src.destroy();
+  void src.cleanup();
 
   ctx.stage(4, "Serialising compressed PDF");
   const bytes = await out.save({ useObjectStreams: true });
@@ -471,7 +472,7 @@ export async function watermarkPdf(ctx: RunCtx): Promise<OutputFile[]> {
 
   let font: Awaited<ReturnType<PDFDocument["embedFont"]>> | null = null;
   if (o.mode === "text") {
-    const fontMap: Record<string, StandardFonts> = {
+    const fontMap: Record<string, import("pdf-lib").StandardFonts> = {
       helvetica: StandardFonts.Helvetica,
       "helvetica-bold": StandardFonts.HelveticaBold,
       times: StandardFonts.TimesRoman,
@@ -483,7 +484,7 @@ export async function watermarkPdf(ctx: RunCtx): Promise<OutputFile[]> {
     font = await doc.embedFont(chosen);
     if (!String(o.text ?? "").trim()) throw new Error("Enter the watermark text first.");
   }
-  let wmImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null = null;
+  let wmImage: PDFImage | null = null;
   if (o.mode === "image") {
     const imageFile = o.imageFile as File | undefined;
     if (!imageFile) throw new Error("Choose a watermark image first.");
