@@ -41,6 +41,7 @@ export function WatermarkPdfTool() {
   const [position, setPosition] = useState("center");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageScale, setImageScale] = useState(40);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { start, starting } = useStartJob(tool.id);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function WatermarkPdfTool() {
       if (!entry) {
         setEntries([]);
         setSelected(new Set());
+        setLoadError(null);
         return;
       }
       try {
@@ -57,8 +59,12 @@ export function WatermarkPdfTool() {
         if (!alive) return;
         setEntries(Array.from({ length: numPages }, (_, i) => ({ key: `p${i}`, index: i, rotation: 0 })));
         setSelected(new Set());
+        setLoadError(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not read this PDF.");
+        if (!alive) return;
+        setEntries([]);
+        setLoadError(err instanceof Error ? err.message : "This PDF could not be read — it may be corrupted or encrypted.");
+        toast.error("Could not read this PDF.");
       }
     })();
     return () => {
@@ -102,6 +108,7 @@ export function WatermarkPdfTool() {
       }
       busyHint={allPages ? "The watermark will be stamped on every page." : `Watermarking ${selected.size} selected page${selected.size === 1 ? "" : "s"}.`}
       fileThumb="pdf"
+      inputError={loadError}
       options={
         <>
           <OptionSection title="Watermark style">

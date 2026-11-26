@@ -16,6 +16,7 @@ export function ExtractPagesTool() {
   const [entries, setEntries] = useState<PdfPageEntry[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rangeText, setRangeText] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { start, starting } = useStartJob(tool.id);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function ExtractPagesTool() {
       if (!entry) {
         setEntries([]);
         setSelected(new Set());
+        setLoadError(null);
         return;
       }
       try {
@@ -32,8 +34,12 @@ export function ExtractPagesTool() {
         if (!alive) return;
         setEntries(Array.from({ length: numPages }, (_, i) => ({ key: `p${i}`, index: i, rotation: 0 })));
         setSelected(new Set());
+        setLoadError(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not read this PDF.");
+        if (!alive) return;
+        setEntries([]);
+        setLoadError(err instanceof Error ? err.message : "This PDF could not be read — it may be corrupted or encrypted.");
+        toast.error("Could not read this PDF.");
       }
     })();
     return () => {
@@ -83,6 +89,7 @@ export function ExtractPagesTool() {
           setEntries([]);
           setSelected(new Set());
           setRangeText("");
+          setLoadError(null);
         }
       }}
       canRun={selected.size > 0 && !starting}
@@ -99,6 +106,7 @@ export function ExtractPagesTool() {
           : "Click pages or type a range like 1-3, 7."
       }
       fileThumb="pdf"
+      inputError={loadError}
       options={
         <div className="border-2 border-obsidian bg-white p-4 shadow-hard">
           <label className="block">

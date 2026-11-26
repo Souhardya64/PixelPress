@@ -86,11 +86,18 @@ export function CompressPdfTool() {
       busyHint={
         pageCount === "loading"
           ? "Reading PDF information…"
-          : typeof pageCount === "number"
-            ? `This document has ${pageCount} pages. Pick a compression level below.`
-            : undefined
+          : pageCount === "error"
+            ? "This file can't be read — remove it and try a different PDF."
+            : typeof pageCount === "number"
+              ? `This document has ${pageCount} pages. Pick a compression level below.`
+              : undefined
       }
       fileThumb="pdf"
+      inputError={
+        pageCount === "error"
+          ? "This PDF could not be read — it may be corrupted, encrypted or not a real PDF. Remove it and try another file."
+          : null
+      }
       options={
         <OptionSection title="Compression level">
           <div className="grid gap-3 sm:grid-cols-3">

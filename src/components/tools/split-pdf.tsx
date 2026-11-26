@@ -18,6 +18,7 @@ export function SplitPdfTool() {
   const [ranges, setRanges] = useState("1-3, 4-6");
   const [interval, setIntervalValue] = useState(2);
   const [rangeError, setRangeError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { start, starting } = useStartJob(tool.id);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function SplitPdfTool() {
       const entry = files[0];
       if (!entry) {
         setEntries([]);
+        setLoadError(null);
         return;
       }
       try {
@@ -34,8 +36,12 @@ export function SplitPdfTool() {
         setEntries(Array.from({ length: numPages }, (_, i) => ({ key: `p${i}`, index: i, rotation: 0 })));
         if (!alive) return;
         setRanges(`1-${Math.min(3, numPages)}`);
+        setLoadError(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not read this PDF.");
+        if (!alive) return;
+        setEntries([]);
+        setLoadError(err instanceof Error ? err.message : "This PDF could not be read — it may be corrupted or encrypted.");
+        toast.error("Could not read this PDF.");
       }
     })();
     return () => {
@@ -101,6 +107,7 @@ export function SplitPdfTool() {
           : undefined
       }
       fileThumb="pdf"
+      inputError={loadError}
       options={
         <OptionSection title="Split mode">
           <SegmentedControl

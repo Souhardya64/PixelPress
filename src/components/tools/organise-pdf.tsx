@@ -13,6 +13,7 @@ const tool = getToolBySlug("organise-pdf")!;
 export function OrganisePdfTool() {
   const [files, setFiles] = useState<PPFileEntry[]>([]);
   const [entries, setEntries] = useState<PdfPageEntry[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { start, starting } = useStartJob(tool.id);
 
   useEffect(() => {
@@ -21,14 +22,19 @@ export function OrganisePdfTool() {
       const entry = files[0];
       if (!entry) {
         setEntries([]);
+        setLoadError(null);
         return;
       }
       try {
         const { numPages } = await loadPdfDoc(entry.id, entry.file);
         if (!alive) return;
         setEntries(Array.from({ length: numPages }, (_, i) => ({ key: `p${i}`, index: i, rotation: 0 })));
+        setLoadError(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not read this PDF.");
+        if (!alive) return;
+        setEntries([]);
+        setLoadError(err instanceof Error ? err.message : "This PDF could not be read — it may be corrupted or encrypted.");
+        toast.error("Could not read this PDF.");
       }
     })();
     return () => {
@@ -54,6 +60,7 @@ export function OrganisePdfTool() {
       }
       busyHint="Drag thumbnails to reorder, rotate or delete pages — the grid below is your live preview."
       fileThumb="pdf"
+      inputError={loadError}
       options={
         <div className="border-2 border-obsidian bg-white p-4 shadow-hard">
           <p className="pp-label text-obsidian/70">

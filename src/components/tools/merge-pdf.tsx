@@ -95,6 +95,11 @@ export function MergePdfTool() {
           </Field>
         </div>
       }
+      inputError={
+        files.some((f) => pageCounts[`${f.file.name}:${f.file.size}`] === "error")
+          ? "One or more PDFs could not be read — they may be corrupted or encrypted. Remove them to continue."
+          : null
+      }
       customPanel={
         files.length > 0 ? (
           <ul className="mt-4 space-y-2">

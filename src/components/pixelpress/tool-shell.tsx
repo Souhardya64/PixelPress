@@ -26,6 +26,7 @@ export function ToolShell({
   onStart,
   busyHint,
   fileThumb,
+  inputError,
 }: {
   tool: ToolMeta;
   files: PPFileEntry[];
@@ -37,6 +38,7 @@ export function ToolShell({
   onStart: () => void;
   busyHint?: string;
   fileThumb?: "image" | "pdf";
+  inputError?: string | null;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -107,6 +109,12 @@ export function ToolShell({
       {error && (
         <p role="alert" className="mt-3 border-2 border-obsidian bg-alert/10 px-3 py-2 text-sm font-medium text-obsidian">
           {error}
+        </p>
+      )}
+
+      {inputError && (
+        <p role="alert" className="mt-3 border-2 border-obsidian bg-alert/10 px-3 py-2 text-sm font-medium text-obsidian">
+          {inputError}
         </p>
       )}
 
