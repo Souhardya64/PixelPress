@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
+let ideavoTagger: string | undefined;
+try {
+  ideavoTagger = require.resolve("@ideavo/webpack-tagger");
+} catch {
+  ideavoTagger = undefined;
+}
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   cacheComponents:false,
@@ -26,14 +33,16 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "sonner", "jszip"],
   },
-  turbopack: {
-    rules: {
-      "*.{jsx,tsx}": {
-        condition: { not: 'foreign' },
-        loaders: [require.resolve('@ideavo/webpack-tagger')],
-      },
-    },
-  },
+  turbopack: ideavoTagger
+    ? {
+        rules: {
+          "*.{jsx,tsx}": {
+            condition: { not: 'foreign' },
+            loaders: [ideavoTagger],
+          },
+        },
+      }
+    : {},
 } as NextConfig;
 
 export default nextConfig;
