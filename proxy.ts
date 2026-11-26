@@ -1,28 +1,35 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS,HEAD',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Max-Age': '86400',
+  'Cross-Origin-Resource-Policy': 'cross-origin',
+}
+
 export function proxy(request: NextRequest) {
-  // Skip middleware for API routes, static files, and Next.js internals
-  if (
-    request.nextUrl.pathname.startsWith('/api/') ||
-    request.nextUrl.pathname.startsWith('/_next/') ||
-    request.nextUrl.pathname.includes('.')
-  ) {
-    return NextResponse.next()
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        ...CORS_HEADERS,
+        'Access-Control-Allow-Headers':
+          request.headers.get('access-control-request-headers') || '*',
+      },
+    })
   }
 
-  return NextResponse.next()
+  const response = NextResponse.next()
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    response.headers.set(key, value)
+  }
+  return response
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }

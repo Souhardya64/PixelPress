@@ -4,15 +4,30 @@ const DB_NAME = "pixelpress";
 const DB_VERSION = 1;
 const STORE = "jobs";
 const JOB_TTL_MS = 6 * 60 * 60 * 1000;
+const OPEN_TIMEOUT_MS = 2000;
 
-let dbPromise: Promise<IDBDatabase> | null = null;
+type Mode = "pending" | "idb" | "memory";
 
-function openDb(): Promise<IDBDatabase> {
-  if (typeof indexedDB === "undefined") {
-    return Promise.reject(new Error("IndexedDB is not available in this browser context."));
-  }
-  if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
+let mode: Mode = "pending";
+let dbPromise: Promise<IDBDatabase | null> | null = null;
+
+const memJobs = new Map<string, JobRecord>();
+
+function openDbOnce(): Promise<IDBDatabase | null> {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve) => {
+    let settled = false;
+    const settle = (db: IDBDatabase | null) => {
+      if (settled) return;
+      settled = true;
+      mode = db ? "idb" : "memory";
+      resolve(db);
+    };
+    try {
+      if (typeof indexedDB === "undefined") {
+        settle(null);
+        return;
+      }
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
@@ -20,20 +35,34 @@ function openDb(): Promise<IDBDatabase> {
           db.createObjectStore(STORE, { keyPath: "id" });
         }
       };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error ?? new Error("Failed to open local database"));
-    });
-  }
+      req.onsuccess = () => settle(req.result);
+      req.onerror = () => settle(null);
+      req.onblocked = () => settle(null);
+      setTimeout(() => settle(null), OPEN_TIMEOUT_MS);
+    } catch {
+      settle(null);
+    }
+  });
   return dbPromise;
 }
 
-async function withStore<T>(
-  mode: IDBTransactionMode,
+async function storageMode(): Promise<Mode> {
+  if (mode === "pending") await openDbOnce();
+  return mode;
+}
+
+function degradeToMemory(): void {
+  mode = "memory";
+  dbPromise = Promise.resolve(null);
+}
+
+function runTx<T>(
+  db: IDBDatabase,
+  txnMode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => IDBRequest<T> | void
 ): Promise<T> {
-  const db = await openDb();
   return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
+    const tx = db.transaction(STORE, txnMode);
     const store = tx.objectStore(STORE);
     let result: T | undefined;
     let hasResult = false;
@@ -54,19 +83,61 @@ async function withStore<T>(
 }
 
 export async function putJob(job: JobRecord): Promise<void> {
-  await withStore("readwrite", (store) => store.put(job));
+  if ((await storageMode()) === "memory") {
+    memJobs.set(job.id, job);
+    return;
+  }
+  try {
+    const db = await openDbOnce();
+    if (!db) throw new Error("unavailable");
+    await runTx(db, "readwrite", (store) => store.put(job));
+  } catch {
+    degradeToMemory();
+    memJobs.set(job.id, job);
+  }
 }
 
 export async function getJob(id: string): Promise<JobRecord | undefined> {
-  return withStore<JobRecord | undefined>("readonly", (store) => store.get(id));
+  if ((await storageMode()) === "memory") {
+    return memJobs.get(id);
+  }
+  try {
+    const db = await openDbOnce();
+    if (!db) throw new Error("unavailable");
+    return await runTx<JobRecord | undefined>(db, "readonly", (store) => store.get(id));
+  } catch {
+    degradeToMemory();
+    return memJobs.get(id);
+  }
 }
 
 export async function deleteJob(id: string): Promise<void> {
-  await withStore("readwrite", (store) => store.delete(id));
+  if ((await storageMode()) === "memory") {
+    memJobs.delete(id);
+    return;
+  }
+  try {
+    const db = await openDbOnce();
+    if (!db) throw new Error("unavailable");
+    await runTx(db, "readwrite", (store) => store.delete(id));
+  } catch {
+    degradeToMemory();
+    memJobs.delete(id);
+  }
 }
 
 export async function allJobIds(): Promise<string[]> {
-  return withStore<string[]>("readonly", (store) => store.getAllKeys() as IDBRequest<string[]>);
+  if ((await storageMode()) === "memory") {
+    return [...memJobs.keys()];
+  }
+  try {
+    const db = await openDbOnce();
+    if (!db) throw new Error("unavailable");
+    return await runTx<string[]>(db, "readonly", (store) => store.getAllKeys() as IDBRequest<string[]>);
+  } catch {
+    degradeToMemory();
+    return [...memJobs.keys()];
+  }
 }
 
 export async function cleanupOldJobs(): Promise<void> {
@@ -85,9 +156,5 @@ export async function cleanupOldJobs(): Promise<void> {
 }
 
 export function isStorageAvailable(): boolean {
-  try {
-    return typeof indexedDB !== "undefined";
-  } catch {
-    return false;
-  }
+  return mode !== "memory";
 }

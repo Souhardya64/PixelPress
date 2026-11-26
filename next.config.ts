@@ -10,6 +10,19 @@ try {
 const nextConfig: NextConfig = {
   reactCompiler: true,
   cacheComponents:false,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "*" },
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+        ],
+      },
+    ];
+  },
   images: {
     unoptimized: process.env.NODE_ENV === 'development',
     remotePatterns: [
@@ -23,12 +36,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: ['*'],
+  allowedDevOrigins: ['null'],
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "sonner", "jszip"],
